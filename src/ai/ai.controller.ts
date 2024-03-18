@@ -5,22 +5,22 @@ import { TranslateLanguageDto } from './dto/translate-language.dto';
 import { CheckIntentDto } from './dto/check-intent-dto';
 import { CheckTransactionDatesDto } from './dto/check-transaction-dates.dto';
 
-@Controller('user')
+@Controller('ai')
 export class AIController {
   constructor(private readonly aiService: AIService) {}
-  @Post()
+  @Post('/language/detect')
   detectLanguage(@Body() detectLanguageDto: DetectLanguageDto) {
     return this.aiService.detectLanguage(detectLanguageDto);
   }
-  @Post()
+  @Post('/language/translate')
   translateLanguage(@Body() translateLanguageDto: TranslateLanguageDto) {
     return this.aiService.translateLanguage(translateLanguageDto);
   }
-  @Post()
+  @Post('/intent/check')
   checkIntent(@Body() checkIntentDto: CheckIntentDto) {
     return this.aiService.checkIntent(checkIntentDto);
   }
-  @Post()
+  @Post('/transaction-dates/check')
   checkTransactionDates(@Body() checkTransactionDatesDto: CheckTransactionDatesDto) {
     return this.aiService.checkTransactionDates(checkTransactionDatesDto);
   }
