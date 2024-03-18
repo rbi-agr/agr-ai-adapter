@@ -1,0 +1,7 @@
+Create a .env file locally and copy the following lines inside:
+
+DETECT_LANGUAGE_API = "https://rbih-agr.free.beeceptor.com/detectlanguage"
+TRANSLATE_LANGUAGE_API = "https://rbih-agr.free.beeceptor.com/translatelanguage"
+INTENT_CLASSIFIER_API = "https://rbih-agr.free.beeceptor.com/checkIntent"
+GENERAL_TASK_API = "https://rbih-agr.free.beeceptor.com/checkTransactionDates"
+

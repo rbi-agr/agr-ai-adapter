@@ -1,5 +1,5 @@
 import { IsNotEmpty, IsString } from 'class-validator';
-export class CheckTransactionDatesDto {
+export class GetAIResponseDto {
   @IsString()
   @IsNotEmpty()
   userprompt: string;
