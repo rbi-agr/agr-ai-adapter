@@ -5,11 +5,18 @@ import { TranslateLanguageDto } from './dto/translate-language.dto';
 import { CheckIntentDto } from './dto/check-intent-dto';
 import { GetAIResponseDto } from './dto/get-ai-response.dto';
 import axios from 'axios';
-import { INSIDE_API, RESPONSE_RECEIVED, ERROR_MESSAGE, DETECT_LANGUAGE_API, INTENT_CLASSIFIER_API, TRANSLATE_LANGUAGE_API, GENERAL_TASK_API } from './ai.constants';
+import { INSIDE_API, RESPONSE_RECEIVED, ERROR_MESSAGE, DETECT_LANGUAGE_API, INTENT_CLASSIFIER_API, TRANSLATE_LANGUAGE_API, GENERAL_TASK_API, MODEL_NAME } from './ai.constants';
 
 @Injectable()
 export class AIService {
   constructor(private logger: LoggerService) {}
+
+  private readonly taskTemplates = {
+    // Task Mapping will come here
+    task1: 'Generate the response to the {{ task }} query raised by the customer.',
+    task2: 'User entered all the necessary details asked by the relationship manager except {{ task }}. Generate one sentence considering you are the relationship manager asking for the remaining reuired details to fetch the transaction.'
+  };
+
   async detectLanguage(detectLanguageDto: DetectLanguageDto) {
     try {
       //Calling the translator API for detecting the language.
@@ -48,14 +55,40 @@ export class AIService {
   }
   async getAIResponse(getAIResponseDto: GetAIResponseDto) {
     try {
-      //Calling the mistralAI API for checking the transaction dates.
+      //Calling the mistralAI API
       this.logger.info(INSIDE_API);
-      let response = await axios.post(GENERAL_TASK_API, getAIResponseDto);
+
+      const { userprompt, task } = getAIResponseDto;
+      const formattedPrompt = this.formatPrompt(userprompt, task);
+
+      const promptPayload = {
+        model: MODEL_NAME,
+        messages: [
+          {
+            role: 'user',
+            content: formattedPrompt,
+          },
+        ],
+      };
+
+      let response = await axios.post(GENERAL_TASK_API, promptPayload);
+
       this.logger.info(RESPONSE_RECEIVED);
-      return response.data;
+      return response.data.choices[0].message.content;
     } catch (error) {
       this.logger.error(ERROR_MESSAGE, 'Optional error trace');
       throw new HttpException(error.response || 'AI-Service not running', error.response?.status || error.status || 500);
+    }
+  }
+
+  private formatPrompt(userprompt: string, task: string): string {
+    const template = this.taskTemplates[task];
+
+    if (template) {
+      return template.replace('{{ task }}', task);
+    } else {
+      // If no template is found, returning the original user prompt
+      return userprompt;
     }
   }
 }

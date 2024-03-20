@@ -10,12 +10,12 @@ COPY package*.json ./
 # Install Nest CLI globally
 RUN npm install -g @nestjs/cli
 
+RUN npm install
+
 # Copy the rest of the application code to the container
 COPY . .
 
-COPY env_local.txt .env
-
-RUN npm install
+COPY .env_local .env
 
 # Build nest file
 RUN npm run build

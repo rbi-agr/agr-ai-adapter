@@ -8,3 +8,4 @@ export const DETECT_LANGUAGE_API = process.env.DETECT_LANGUAGE_API;
 export const TRANSLATE_LANGUAGE_API = process.env.TRANSLATE_LANGUAGE_API;
 export const INTENT_CLASSIFIER_API = process.env.INTENT_CLASSIFIER_API;
 export const GENERAL_TASK_API = process.env.GENERAL_TASK_API;
+export const MODEL_NAME = process.env.MODEL_NAME;
