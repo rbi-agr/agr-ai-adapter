@@ -20,7 +20,7 @@ export class AIController {
   checkIntent(@Body() checkIntentDto: CheckIntentDto) {
     return this.aiService.checkIntent(checkIntentDto);
   }
-  @Post('/general-task')
+  @Post('/generate-prompt')
   checkTransactionDates(@Body() getAIResponseDto: GetAIResponseDto) {
     return this.aiService.getAIResponse(getAIResponseDto);
   }
