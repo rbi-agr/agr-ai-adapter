@@ -21,7 +21,7 @@ RUN npm install
 RUN npm run build
 
 # Expose the port that the Nest.js application will run on
-EXPOSE 3000
+EXPOSE 8080
 
 # Command to run the Nest.js application
 CMD ["npm", "run", "start:prod"]

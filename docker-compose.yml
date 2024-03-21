@@ -1,0 +1,15 @@
+version: "3.8"
+
+services:
+  ai-adapter:
+    build: .
+    ports:
+      - "8080:3000" 
+    networks:
+      - app-network
+    env_file:
+      - .env_local #need to check
+
+networks:
+  app-network:
+    driver: bridge
