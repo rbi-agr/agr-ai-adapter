@@ -58,15 +58,13 @@ export class AIService {
       //Calling the mistralAI API
       this.logger.info(INSIDE_API);
 
-      const { userprompt, task } = getAIResponseDto;
-      const formattedPrompt = this.formatPrompt(userprompt, task);
-
       const promptPayload = {
         model: MODEL_NAME,
         messages: [
           {
             role: 'user',
-            content: formattedPrompt,
+            content: getAIResponseDto,
+            stream: false
           },
         ],
       };

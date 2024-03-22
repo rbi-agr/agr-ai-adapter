@@ -3,9 +3,4 @@ export class GetAIResponseDto {
   @IsString()
   @IsNotEmpty()
   userprompt: string;
-
-  @IsString()
-  @IsNotEmpty()
-  task: string;
-
 }
