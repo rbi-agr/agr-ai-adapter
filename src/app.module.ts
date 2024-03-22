@@ -4,7 +4,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AIModule } from './ai/ai.module';
 import { LoggerModule } from './logger/logger.module';
-import { LoggerService } from './logger/logger.service';
+import { DocumentsModule } from './documents/documents.module';
 
 @Module({
   imports: [
@@ -13,6 +13,7 @@ import { LoggerService } from './logger/logger.service';
     }),
     AIModule,
     LoggerModule,
+    DocumentsModule
   ],
   controllers: [AppController],
   providers: [AppService],
