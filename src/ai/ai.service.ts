@@ -62,31 +62,24 @@ export class AIService {
         model: MODEL_NAME,
         messages: [
           {
-            role: 'user',
-            content: getAIResponseDto,
-            stream: false
+            role: 'system',
+            content: 'I am Helpful AI Bank Assitant and can help with various task and information'
           },
+          {
+            role: 'user',
+            content: getAIResponseDto.userprompt
+          }
         ],
+        stream: false
       };
 
       let response = await axios.post(GENERAL_TASK_API, promptPayload);
 
       this.logger.info(RESPONSE_RECEIVED);
-      return response.data.choices[0].message.content;
+      return response.data.message.content;
     } catch (error) {
       this.logger.error(ERROR_MESSAGE, 'Optional error trace');
       throw new HttpException(error.response || 'AI-Service not running', error.response?.status || error.status || 500);
-    }
-  }
-
-  private formatPrompt(userprompt: string, task: string): string {
-    const template = this.taskTemplates[task];
-
-    if (template) {
-      return template.replace('{{ task }}', task);
-    } else {
-      // If no template is found, returning the original user prompt
-      return userprompt;
     }
   }
 }

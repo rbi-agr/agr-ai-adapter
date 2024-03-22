@@ -21,7 +21,7 @@ export class AIController {
     return this.aiService.checkIntent(checkIntentDto);
   }
   @Post('/generate-prompt')
-  checkTransactionDates(@Body() getAIResponseDto: GetAIResponseDto) {
+  getGenerativeResponse(@Body() getAIResponseDto: GetAIResponseDto) {
     return this.aiService.getAIResponse(getAIResponseDto);
   }
 }
