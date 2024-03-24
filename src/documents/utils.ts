@@ -31,3 +31,18 @@ export const splitContent = (content: string): string[] => {
     }
     return chunks;
 }
+
+export const getClassSchema = (name: string) => {
+
+     return {
+        class: name,
+        description: "Stores documents in smaller chunks",
+        properties: [
+            {
+                name: "content",
+                dataType: ["text"],
+                description: "The text content of the document",
+            },
+        ],
+    };
+}

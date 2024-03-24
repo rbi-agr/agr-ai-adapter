@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 import * as mammoth from 'mammoth';
 import * as pdfjs from 'pdfjs-dist';
 import weaviate, { WeaviateClient } from 'weaviate-ts-client';
-import {detectContentType, ensureClassExists, splitContent} from "./utils";
-import {DocumentClassSchema, MISTRAL_API_URL, WEAVIATE_HTTP, WEAVIATE_URL} from "./document.constants";
+import {detectContentType, ensureClassExists, getClassSchema, splitContent} from "./utils";
+import {MISTRAL_API_URL, WEAVIATE_HTTP, WEAVIATE_URL} from "./document.constants";
 import {RagDataDto} from "./dto/rag-data-dto";
 import {Ollama} from "@langchain/community/llms/ollama";
 
@@ -17,13 +17,7 @@ const ollamaLLM = new Ollama({
   model: "mistral",
   temperature: 0
 });
-// Parameters for Ollama initialization may need to be adjusted
-// based on the actual available constructors from 'langchain'.
-// const ollamaLLM = new Ollama({
-//   baseUrl: "http://0.0.0.0:11434",
-//   model: "mistral",
-//   temperature: 0.4
-// });
+
 @Injectable()
 export class DocumentsService {
 
@@ -50,20 +44,24 @@ export class DocumentsService {
     const chunks: any = splitContent(textContent);
     return await chunks
   }
-  private async createDocuments(chunks, fileName): Promise<void> {
-    await ensureClassExists(client, "Document", DocumentClassSchema )
+  async createDocuments(chunks, fileName): Promise<object> {
+    await ensureClassExists(client, "Document", getClassSchema("Document") )
     console.log("Storing the data in DB");
-    for (const page of chunks) {
-      try {
-        await client.data.creator()
-            .withClassName('Document')
-            .withProperties({ content: page })
-            .do();
-        console.log(`Document stored with content: ${page}`);
-      } catch (error) {
-        console.error("Failed to store document in Weaviate:", error);
+    if (chunks && chunks.length > 0) {
+      for (const page of chunks) {
+        try {
+          await client.data.creator()
+              .withClassName('Document')
+              .withProperties({ content: page })
+              .do();
+          console.log(`Document stored with content: ${page}`);
+        } catch (error) {
+          console.error("Failed to store document in Weaviate:", error);
+        }
       }
+      return { message: `Document stored with content from : ${fileName}`}
     }
+    return { message: `No Data to store from file: ${fileName}`}
   }
 
   async uploadDocument(file: any): Promise<void> {
@@ -76,7 +74,7 @@ export class DocumentsService {
     } else {
       throw new Error('Unsupported file format');
     }
-    this.createDocuments(chunks, file.filename)
+    return chunks
   }
 
   async getRagResponse(ragDataDto: RagDataDto) {

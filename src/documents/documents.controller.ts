@@ -17,8 +17,9 @@ export class DocumentsController {
       if (!fileContent) {
         throw new BadRequestException('No file content found');
       }
-      await this.documentsService.uploadDocument(fileContent);
-      return { message: 'Document uploaded successfully!' };
+      const chunks = await this.documentsService.uploadDocument(fileContent);
+      const response = await this.documentsService.createDocuments(chunks, 'file.pdf')
+      return response;
     } catch (error) {
       throw new BadRequestException(`Error uploading document: ${error.message}`);
     }
@@ -27,8 +28,13 @@ export class DocumentsController {
   @Post('fetch-rag-response')
   async fetchFile(@Body() ragDataDto: RagDataDto) {
     const ragDoc = await this.documentsService.getRagResponse(ragDataDto);
-    const botResponse = await this.documentsService.getMistralResponse(ragDataDto, ragDoc);
-    return {reply: botResponse}
+    let botResponse = "I dont think i can help you with this query!";
+    let isRagDone = false;
+    if (ragDoc.length > 100) {
+      botResponse = await this.documentsService.getMistralResponse(ragDataDto, ragDoc);
+      isRagDone = true
+    }
+    return {response: botResponse, isRagDone: isRagDone}
   }
 }
 
