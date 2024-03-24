@@ -1,60 +1,31 @@
 import { Injectable } from '@nestjs/common';
 import * as mammoth from 'mammoth';
 import * as pdfjs from 'pdfjs-dist';
-import axios from "axios";
-import weaviate, { Class, ClassProperty, Client } from 'weaviate-client';
-import { TextLoader, PDFLoader } from "langchain/document_loaders";
-import { RecursiveCharacterTextSplitter } from "langchain/text_splitters";
-import { Ollama } from "langchain/llms";
+import weaviate, { WeaviateClient } from 'weaviate-ts-client';
+import {detectContentType, ensureClassExists, splitContent} from "./utils";
+import {DocumentClassSchema, MISTRAL_API_URL, WEAVIATE_HTTP, WEAVIATE_URL} from "./document.constants";
+import {RagDataDto} from "./dto/rag-data-dto";
+import {Ollama} from "@langchain/community/llms/ollama";
 
-
-const client: Client = weaviate.client({
-  scheme: 'http',
-  host: 'localhost:8999',
+const client: WeaviateClient = weaviate.client({
+  scheme: WEAVIATE_HTTP,
+  host: WEAVIATE_URL,
 });
 
+const ollamaLLM = new Ollama({
+  baseUrl: MISTRAL_API_URL,
+  model: "mistral",
+  temperature: 0
+});
 // Parameters for Ollama initialization may need to be adjusted
 // based on the actual available constructors from 'langchain'.
-const ollamaLLM = new Ollama({
-  baseUrl: "http://0.0.0.0:11434",
-  model: "mistral",
-  temperature: 0.4
-});
+// const ollamaLLM = new Ollama({
+//   baseUrl: "http://0.0.0.0:11434",
+//   model: "mistral",
+//   temperature: 0.4
+// });
 @Injectable()
 export class DocumentsService {
-
-  async uploadDocument(file: any): Promise<void> {
-    const contentType = this.detectContentType(file);
-    if (contentType === 'application/pdf') {
-      await this.processPDF(file.buffer, file.originalname);
-    } else if (contentType === 'application/msword') {
-      await this.processDOCX(file.buffer, file.originalname);
-    } else {
-      throw new Error('Unsupported file format');
-    }
-  }
-
-  private detectContentType(fileContent: Buffer): string {
-    const signature = fileContent.toString('hex', 0, 4);
-    switch (signature) {
-      case '25504446':
-        return 'application/pdf';
-      case '504b0304':
-        return 'application/msword';
-      default:
-        return '';
-    }
-  }
-
-  // private async processPDF(buffer: Buffer, filename: string): Promise<void> {
-  //   const pdfDoc = await pdfLib.PDFDocument.load(buffer);
-  //   const pages = pdfDoc.getPages();
-  //   const textContent = await Promise.all(pages.map(async (page: any) => await page.getText));
-  //   console.log({textContent});
-  //   const chunks = this.splitContent(textContent.join('\n'));
-  //   const embeddings = await this.generateEmbeddings(chunks);
-  //   await this.createDocuments(embeddings, filename);
-  // }
 
   private async processPDF(buffer: Buffer, filename: string): Promise<void> {
     const loadingTask = pdfjs.getDocument({ data: buffer });
@@ -70,104 +41,66 @@ export class DocumentsService {
     }
 
     const allText = textContent.join('\n');
-    const chunks = this.splitContent(allText);
-    const embeddings = await this.generateEmbeddings(chunks);
-    await this.createDocuments(embeddings, filename);
+    const chunks: any = splitContent(allText);
+    return await chunks
   }
-
   private async processDOCX(buffer: Buffer, filename: string): Promise<void> {
     const { value } = await mammoth.extractRawText({ buffer });
     const textContent = value;
-    const chunks = this.splitContent(textContent);
-    const embeddings = await this.generateEmbeddings(chunks);
-    await this.createDocuments(embeddings, filename);
+    const chunks: any = splitContent(textContent);
+    return await chunks
   }
-
-  private splitContent(content: string): string[] {
-    const chunkSize = 1024;
-    const chunks = [];
-    for (let i = 0; i < content.length; i += chunkSize) {
-      chunks.push(content.slice(i, i + chunkSize));
+  private async createDocuments(chunks, fileName): Promise<void> {
+    await ensureClassExists(client, "Document", DocumentClassSchema )
+    console.log("Storing the data in DB");
+    for (const page of chunks) {
+      try {
+        await client.data.creator()
+            .withClassName('Document')
+            .withProperties({ content: page })
+            .do();
+        console.log(`Document stored with content: ${page}`);
+      } catch (error) {
+        console.error("Failed to store document in Weaviate:", error);
+      }
     }
-    return chunks;
   }
 
-  private async generateEmbeddings(chunks: string[]) {
-    // const embeddings = await Promise.all(
-    //   chunks.map(async (chunk) => {
-    //     try {
-    //       const response = await axios.post(this.mistralApiUrl, {
-    //         model: 'mistral-embed',
-    //         input: [chunk],
-    //         encoding_format: 'float',
-    //       }, {
-    //         headers: {
-    //           "Authorization": "Bearer "
-    //         }
-    //       });
-    //       console.log({ response });
-    //       return response.data.embeddings[0];
-    //     } catch (error) {
-    //       console.error('Error generating embedding for chunk:', chunk, error);
-    //       return 'error_embedding';
-    //     }
-    //   })
-    // );
-    const embeddings = await Promise.all(
-      chunks.map(async (chunk) => {
-        try {
-          const response = await axios.post('http://localhost:11434/api/embeddings', {
-            model: "nomic-embed-text",
-            prompt: chunk
-          });
-          return {
-            "content": chunk,
-            "embedding": response.data
-          };
-        } catch (error) {
-          console.error('Error generating embedding for chunk:', chunk, error);
-        }
-      })
-    );
-    console.log(embeddings);
-    return embeddings;
+  async uploadDocument(file: any): Promise<void> {
+    const contentType = detectContentType(file);
+    let chunks: any = []
+    if (contentType === 'application/pdf') {
+      chunks =  await this.processPDF(file.buffer, file.originalname);
+    } else if (contentType === 'application/msword') {
+      chunks = await this.processDOCX(file.buffer, file.originalname);
+    } else {
+      throw new Error('Unsupported file format');
+    }
+    this.createDocuments(chunks, file.filename)
   }
 
-  private async createDocuments(embeddings, fileName): Promise<void> {
-    const schema = {
-      classes: [
-        {
-          class: "Document",
-          description: "A file with the name" + fileName,
-          properties: [
-            {
-              dataType: ["text"],
-              name: "content",
-            },
-            {
-              dataType: ["vector"],
-              name: "embedding",
-            },
-          ],
-          vectorIndexType: "hnsw",
-          vectorizer: "none", // Since we're providing the embeddings directly
-        },
-      ],
-    };
-    const client: WeaviateClient = weaviate.client({
-      scheme: 'https',
-      host: 'rbih-agr-5048scvf.weaviate.network',
-      apiKey: new ApiKey('ka3f7i5F6QX34gEqgvwldTlWaewsM9Ib8SFs'),
-    }); 
+  async getRagResponse(ragDataDto: RagDataDto) {
+    const userQuery = ragDataDto.text
     try {
-      const response = await client.data.creator()
-        .withClassName('Document')
-        .withProperties(document)
-        .do();
-      console.log('Document created:', response);
+      const response = await client.graphql.get()
+          .withNearText({ concepts: [userQuery] })
+          .withLimit(10)
+          .withClassName('Document')
+          .withFields('content')
+          .do();
+
+      console.log("Similar documents found:", response.data.Get.Document);
+      return response.data.Get.Document.map((item)=> item.content).join(".\n")
     } catch (error) {
-      console.error('Error storing document in Weaviate:', error);
-      throw new Error('Failed to store document in Weaviate');
+      console.error("Failed to search similar documents:", error);
     }
+  }
+
+  async getMistralResponse(ragDataDto: RagDataDto, ragDoc: any) {
+
+    const finalPrompt = "Use the content: '''" + ragDoc + "'''." +
+        " And then reply to the user Query : '''" + ragDataDto.text + "'''"
+    const answer = await ollamaLLM.invoke(finalPrompt);
+    return answer
   }
 }
