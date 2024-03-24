@@ -1,13 +1,27 @@
 import { Injectable } from '@nestjs/common';
-import weaviate, { WeaviateClient, ApiKey } from 'weaviate-ts-client';
 import * as mammoth from 'mammoth';
-import axios from 'axios';
 import * as pdfjs from 'pdfjs-dist';
+import axios from "axios";
+import weaviate, { Class, ClassProperty, Client } from 'weaviate-client';
+import { TextLoader, PDFLoader } from "langchain/document_loaders";
+import { RecursiveCharacterTextSplitter } from "langchain/text_splitters";
+import { Ollama } from "langchain/llms";
 
+
+const client: Client = weaviate.client({
+  scheme: 'http',
+  host: 'localhost:8999',
+});
+
+// Parameters for Ollama initialization may need to be adjusted
+// based on the actual available constructors from 'langchain'.
+const ollamaLLM = new Ollama({
+  baseUrl: "http://0.0.0.0:11434",
+  model: "mistral",
+  temperature: 0.4
+});
 @Injectable()
 export class DocumentsService {
-  //private readonly mistralApiUrl = 'https://api.mistral.ai/v1/embeddings';
-  private readonly openaiApiKey = "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";
 
   async uploadDocument(file: any): Promise<void> {
     const contentType = this.detectContentType(file);
@@ -78,7 +92,7 @@ export class DocumentsService {
     return chunks;
   }
 
-  private async generateEmbeddings(chunks: string[]): Promise<number[]> {
+  private async generateEmbeddings(chunks: string[]) {
     // const embeddings = await Promise.all(
     //   chunks.map(async (chunk) => {
     //     try {
@@ -102,31 +116,43 @@ export class DocumentsService {
     const embeddings = await Promise.all(
       chunks.map(async (chunk) => {
         try {
-          const response = await axios.post('https://api.openai.com/v1/embeddings', {
-            input: chunk,
-            model: "text-embedding-ada-002",
-            encoding_format: "float",
-          }, {
-            headers: {
-              "Authorization": "Bearer " + this.openaiApiKey
-            }
+          const response = await axios.post('http://localhost:11434/api/embeddings', {
+            model: "nomic-embed-text",
+            prompt: chunk
           });
-          return response.data.data.map(embedding => embedding.embedding);
+          return {
+            "content": chunk,
+            "embedding": response.data
+          };
         } catch (error) {
           console.error('Error generating embedding for chunk:', chunk, error);
-          return 'error_embedding';
         }
       })
     );
-    const allEmbeddings = embeddings.flat().map(parseFloat);
-    console.log({allEmbeddings});
-    return allEmbeddings;
+    console.log(embeddings);
+    return embeddings;
   }
 
-  private async createDocuments(embeddings: number[], content: string): Promise<void> {
-    const document = {
-      content: content,
-      embedding: embeddings
+  private async createDocuments(embeddings, fileName): Promise<void> {
+    const schema = {
+      classes: [
+        {
+          class: "Document",
+          description: "A file with the name" + fileName,
+          properties: [
+            {
+              dataType: ["text"],
+              name: "content",
+            },
+            {
+              dataType: ["vector"],
+              name: "embedding",
+            },
+          ],
+          vectorIndexType: "hnsw",
+          vectorizer: "none", // Since we're providing the embeddings directly
+        },
+      ],
     };
     const client: WeaviateClient = weaviate.client({
       scheme: 'https',
