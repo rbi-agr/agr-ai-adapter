@@ -5,6 +5,7 @@ import { AppService } from './app.service';
 import { AIModule } from './ai/ai.module';
 import { LoggerModule } from './logger/logger.module';
 import { DocumentsModule } from './documents/documents.module';
+import { MulterModule } from '@nestjs/platform-express';
 
 @Module({
   imports: [
@@ -13,7 +14,10 @@ import { DocumentsModule } from './documents/documents.module';
     }),
     AIModule,
     LoggerModule,
-    DocumentsModule
+    DocumentsModule,
+    MulterModule.register({
+      dest: '../../uploads'
+    }),
   ],
   controllers: [AppController],
   providers: [AppService],
