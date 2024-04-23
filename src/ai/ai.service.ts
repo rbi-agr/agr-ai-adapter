@@ -39,7 +39,7 @@ export class AIService {
     try {
       //Calling the intent classifier API for checking the intent.
       this.logger.info('Inside the intent classification API');
-      console.log(process.env)
+
       let response = await axios.post(INTENT_CLASSIFIER_API, checkIntentDto);
       this.logger.info(RESPONSE_RECEIVED);
       return response.data;
