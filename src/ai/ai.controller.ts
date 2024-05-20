@@ -4,6 +4,7 @@ import { DetectLanguageDto } from './dto/detect-language.dto';
 import { TranslateLanguageDto } from './dto/translate-language.dto';
 import { CheckIntentDto } from './dto/check-intent-dto';
 import { GetAIResponseDto } from './dto/get-ai-response.dto';
+import { RuleEngineDto } from './dto/rule-engine-dto';
 
 @Controller('ai')
 export class AIController {
@@ -23,5 +24,9 @@ export class AIController {
   @Post('/generate-prompt')
   getGenerativeResponse(@Body() getAIResponseDto: GetAIResponseDto) {
     return this.aiService.getAIResponse(getAIResponseDto);
+  }
+  @Post('/rule-engine')
+  ruleEngine(@Body() ruleEngineDto: RuleEngineDto) {
+    return this.aiService.ruleEngine(ruleEngineDto);
   }
 }

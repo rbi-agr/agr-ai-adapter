@@ -3,9 +3,10 @@ import { DetectLanguageDto } from './dto/detect-language.dto';
 import { LoggerService } from 'src/logger/logger.service';
 import { TranslateLanguageDto } from './dto/translate-language.dto';
 import { CheckIntentDto } from './dto/check-intent-dto';
+import { RuleEngineDto } from './dto/rule-engine-dto';
 import { GetAIResponseDto } from './dto/get-ai-response.dto';
 import axios from 'axios';
-import { RESPONSE_RECEIVED, ERROR_MESSAGE, DETECT_LANGUAGE_API, INTENT_CLASSIFIER_API, TRANSLATE_LANGUAGE_API, GENERAL_TASK_API, MODEL_NAME } from './ai.constants';
+import { RESPONSE_RECEIVED, ERROR_MESSAGE, DETECT_LANGUAGE_API, INTENT_CLASSIFIER_API, RULE_ENGINE_API, TRANSLATE_LANGUAGE_API, GENERAL_TASK_API, MODEL_NAME } from './ai.constants';
 
 @Injectable()
 export class AIService {
@@ -75,6 +76,20 @@ export class AIService {
     } catch (error) {
       this.logger.error(ERROR_MESSAGE, 'Optional error trace');
       throw new HttpException(error.response || 'AI-Service not running', error.response?.status || error.status || 500);
+    }
+  }
+
+  async ruleEngine(ruleEngineDto: RuleEngineDto) {
+    try {
+      //Calling the intent classifier API for checking the intent.
+      this.logger.info('Inside the rule engine API');
+
+      let response = await axios.post(RULE_ENGINE_API, ruleEngineDto);
+      this.logger.info(RESPONSE_RECEIVED);
+      return response.data;
+    } catch (error) {
+      this.logger.error(ERROR_MESSAGE, 'Optional error trace');
+      throw new HttpException(error.response || 'Rule Engine service is not running', error.response?.status || error.status || 500);
     }
   }
 }
