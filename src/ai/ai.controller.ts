@@ -5,7 +5,6 @@ import { TranslateLanguageDto } from './dto/translate-language.dto';
 import { CheckIntentDto } from './dto/check-intent-dto';
 import { GetAIResponseDto } from './dto/get-ai-response.dto';
 import { RuleEngineDto } from './dto/rule-engine-dto';
-import { SentimentAnalysisDto } from './dto/sentiment-analysis-dto';
 
 @Controller('ai')
 export class AIController {
@@ -29,9 +28,5 @@ export class AIController {
   @Post('/rule-engine')
   ruleEngine(@Body() ruleEngineDto: RuleEngineDto) {
     return this.aiService.ruleEngine(ruleEngineDto);
-  }
-  @Post('/sentiment-analysis')
-  sentimentAnalysis(@Body() sentimentAnalysisDto: SentimentAnalysisDto) {
-    return this.aiService.sentimentAnalysis(sentimentAnalysisDto);
   }
 }
