@@ -21,7 +21,7 @@ COPY .env_local .env
 RUN npm run build
 
 # Expose the port that the Nest.js application will run on
-EXPOSE 3080
+EXPOSE 3001
 
 # Command to run the Nest.js application
 CMD ["npm", "run", "start:prod"]
