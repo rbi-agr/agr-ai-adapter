@@ -46,28 +46,39 @@ export class AIService {
   
       const rawResponse = completion.choices[0]?.message?.content?.trim();
   
-      // Attempt to parse the JSON output safely
-      let translated;
+      let translatedText = '';
       try {
-        translated = JSON.parse(rawResponse || '{}');
+        const parsed = JSON.parse(rawResponse || '{}');
+        translatedText = parsed.text || '';
       } catch (parseError) {
-        this.logger.error('Failed to parse GPT response as JSON:', rawResponse);
-        throw new HttpException('Invalid response from translation model.', 500);
+        this.logger.error('Failed to parse response as JSON:', rawResponse);
+        return {
+          translated: '',
+          error: {
+            message: 'Invalid JSON format from OpenAI response',
+            rawResponse,
+          },
+        };
       }
   
       this.logger.info(RESPONSE_RECEIVED);
       return {
-        translatedText: translated.text,
+        translated: translatedText,
+        error: {},
       };
   
     } catch (error) {
-      this.logger.error(ERROR_MESSAGE, 'Optional error trace');
-      throw new HttpException(
-        error.response || 'Language translation service is not running.',
-        error.response?.status || error.status || 500,
-      );
+      this.logger.error(ERROR_MESSAGE, error);
+      return {
+        translated: '',
+        error: {
+          message: 'Language translation service is not running.',
+          detail: error.response || error.message || error,
+        },
+      };
     }
   }
+  
   
   async checkIntent(checkIntentDto: CheckIntentDto) {
     try {
