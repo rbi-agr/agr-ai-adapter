@@ -7,7 +7,11 @@ import { RuleEngineDto } from './dto/rule-engine-dto';
 import { GetAIResponseDto } from './dto/get-ai-response.dto';
 import axios from 'axios';
 import { RESPONSE_RECEIVED, ERROR_MESSAGE, DETECT_LANGUAGE_API, INTENT_CLASSIFIER_API, RULE_ENGINE_API, TRANSLATE_LANGUAGE_API, GENERAL_TASK_API, MODEL_NAME } from './ai.constants';
+import OpenAI from 'openai';
 
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 @Injectable()
 export class AIService {
   constructor(private logger: LoggerService) {}
@@ -26,16 +30,45 @@ export class AIService {
   }
   async translateLanguage(translateLanguageDto: TranslateLanguageDto) {
     try {
-      //Calling the translator API for translating the language.
       this.logger.info('Inside the Language translation API');
-      let response = await axios.post(TRANSLATE_LANGUAGE_API, translateLanguageDto);
+  
+      const { text, target, source } = translateLanguageDto;
+  
+      const prompt = `Translate the following text from ${source || 'any language'} to ${target || 'English'}:\n\n"${text}"\n\nRespond only with a valid JSON in this format:\n{"text": "Translated output"}\nNo explanation, no line breaks, no extra quotes.`;
+  
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [
+          { role: 'system', content: 'You are a translation assistant.' },
+          { role: 'user', content: prompt },
+        ],
+      });
+  
+      const rawResponse = completion.choices[0]?.message?.content?.trim();
+  
+      // Attempt to parse the JSON output safely
+      let translated;
+      try {
+        translated = JSON.parse(rawResponse || '{}');
+      } catch (parseError) {
+        this.logger.error('Failed to parse GPT response as JSON:', rawResponse);
+        throw new HttpException('Invalid response from translation model.', 500);
+      }
+  
       this.logger.info(RESPONSE_RECEIVED);
-      return response.data;
+      return {
+        translatedText: translated.text,
+      };
+  
     } catch (error) {
       this.logger.error(ERROR_MESSAGE, 'Optional error trace');
-      throw new HttpException(error.response || 'Language translation service is not running.', error.response?.status || error.status || 500);
+      throw new HttpException(
+        error.response || 'Language translation service is not running.',
+        error.response?.status || error.status || 500,
+      );
     }
   }
+  
   async checkIntent(checkIntentDto: CheckIntentDto) {
     try {
       //Calling the intent classifier API for checking the intent.
