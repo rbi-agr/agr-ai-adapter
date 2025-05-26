@@ -16,18 +16,52 @@ const openai = new OpenAI({
 export class AIService {
   constructor(private logger: LoggerService) {}
 
+  // async detectLanguage(detectLanguageDto: DetectLanguageDto) {
+  //   try {
+  //     //Calling the translator API for detecting the language.
+  //     this.logger.info('Inside the Language detection API');
+  //     let response = await axios.post(DETECT_LANGUAGE_API, detectLanguageDto);
+  //     this.logger.info(RESPONSE_RECEIVED);
+  //     return response.data;
+  //   } catch (error) {
+  //     this.logger.error(ERROR_MESSAGE, 'Optional Error Trace');
+  //     throw new HttpException(error.response || 'Language detection service is not running.', error.response?.status || error.status || 500);
+  //   }
+  // }
   async detectLanguage(detectLanguageDto: DetectLanguageDto) {
     try {
-      //Calling the translator API for detecting the language.
-      this.logger.info('Inside the Language detection API');
-      let response = await axios.post(DETECT_LANGUAGE_API, detectLanguageDto);
+      this.logger.info('Inside the Language detection API using OpenAI');
+      const prompt = `Detect the language of the following text and respond only with the ISO 639-1 language code (e.g., "en" for English, "hi" for Hindi, etc.). No explanation.\n\n"${detectLanguageDto.text}"`;
+
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        temperature: 0,
+      });
+
+      const language = response.choices[0]?.message?.content?.trim();
       this.logger.info(RESPONSE_RECEIVED);
-      return response.data;
+      return {
+        language: language.toLowerCase(), // normalize for safety
+        error: null,
+      };
     } catch (error) {
       this.logger.error(ERROR_MESSAGE, 'Optional Error Trace');
-      throw new HttpException(error.response || 'Language detection service is not running.', error.response?.status || error.status || 500);
+      throw new HttpException(
+        {
+          language: null,
+          error: 'Language detection service failed or is not running.',
+        },
+        error.response?.status || error.status || 500,
+      );
     }
   }
+
   async translateLanguage(translateLanguageDto: TranslateLanguageDto) {
     try {
       this.logger.info('Inside the Language translation API');
@@ -60,11 +94,11 @@ export class AIService {
           },
         };
       }
-  
+      this.logger.info(translatedText)
       this.logger.info(RESPONSE_RECEIVED);
       return {
         translated: translatedText,
-        error: {},
+        error: null,
       };
   
     } catch (error) {
@@ -87,6 +121,7 @@ export class AIService {
 
       let response = await axios.post(INTENT_CLASSIFIER_API, checkIntentDto);
       this.logger.info(RESPONSE_RECEIVED);
+      console.log(response.data)
       return response.data;
     } catch (error) {
       this.logger.error(ERROR_MESSAGE, 'Optional error trace');
